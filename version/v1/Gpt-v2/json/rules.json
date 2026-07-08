@@ -1,0 +1,83 @@
+{
+  "files": {
+    "aufmass": {
+      "name": "Aufmaß_Montage.xlsx",
+      "path": "files/Aufmaß_Montage.xlsx",
+      "sheets": {
+        "Aufmaß": "xl/worksheets/sheet1.xml",
+        "Zeiten": "xl/worksheets/sheet2.xml"
+      }
+    },
+    "matliste": {
+      "name": "Mat.-Liste_GF_1.xlsx",
+      "path": "files/Mat.-Liste_GF_1.xlsx",
+      "sheets": {
+        "Tabelle1": "xl/worksheets/sheet1.xml"
+      }
+    }
+  },
+
+  "fasern_rows": {
+    "36": 34,
+    "24": 35,
+    "12": 36,
+    "4": 37,
+    "6": 38
+  },
+  "fasern_allowed": [36, 24, 12, 6, 4],
+
+  "pdf_fields": [
+    { "key": "firma",        "label": "Firma",             "editable": true,  "kind": "text" },
+    { "key": "bauvorhaben_nr","label": "Bauvorhaben-Nr.",   "editable": true,  "kind": "text" },
+    { "key": "datum",        "label": "Datum",              "editable": true,  "kind": "date" },
+    { "key": "nvt",          "label": "Streckenabschnitt – NVt", "editable": true, "kind": "text" },
+    { "key": "adresse",      "label": "Streckenabschnitt – Adresse", "editable": true, "kind": "text" },
+    { "key": "bediener",     "label": "Bediener",           "editable": true,  "kind": "text" },
+    { "key": "fasern",       "label": "Fasern",             "editable": true,  "kind": "fasern" },
+    { "key": "strecke",      "label": "Strecke",            "editable": true,  "kind": "number" }
+  ],
+
+  "manual_fields": [
+    { "key": "ort", "label": "Ort (Stadt) – falls im Protokoll nicht enthalten", "kind": "text" }
+  ],
+
+  "comment": "targets describe where each computed value is written. {row} is substituted with fasern_rows[fasern].",
+  "targets": {
+    "firma": [
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "E1", "prefix": "Firma: " }
+    ],
+    "bauvorhaben_nr": [
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "A2", "prefix": "SM: " },
+      { "file": "aufmass",  "sheet": "Aufmaß",   "cell": "B1" },
+      { "file": "aufmass",  "sheet": "Zeiten",   "cell": "J1", "note": "formula =Aufmaß!B1, only refresh cached value" }
+    ],
+    "datum": [
+      { "file": "aufmass",  "sheet": "Zeiten",   "cell": "A5" },
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "D1", "prefix": "Datum: ", "reformat": "DD.MM.YYYY" }
+    ],
+    "nvt": [
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "E4", "prefix": "NVt: " }
+    ],
+    "adresse": [
+      { "file": "aufmass", "sheet": "Aufmaß", "cell": "B3" }
+    ],
+    "ort": [
+      { "file": "aufmass", "sheet": "Aufmaß", "cell": "B2" }
+    ],
+    "ort_str_combined": [
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "E2", "prefix": "Ort/Str: ", "computed": "ort ? ort + ', ' + adresse : adresse" }
+    ],
+    "bediener_1": [
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "A3", "prefix": "Mitarbeiter: " }
+    ],
+    "bediener_rest": [
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "A4", "prefix": "Mitarbeiter: " }
+    ],
+    "strecke": [
+      { "file": "aufmass",  "sheet": "Aufmaß",   "cell": "D7" },
+      { "file": "matliste", "sheet": "Tabelle1", "cell": "D{row}", "clear_siblings": ["D34", "D35", "D36", "D37", "D38"] }
+    ]
+  },
+
+  "extraction_notes": "Only the first table of the PDF (everything before the 'Prozess Diagramm' heading) is parsed and shown for editing. The rest of the PDF is left untouched and simply carried into the output archive as-is."
+}

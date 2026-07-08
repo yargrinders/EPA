@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Einblas-Protokoll → Aufmaß</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header__mark">EP</div>
+  <div>
+    <h1>Einblas-Protokoll → Aufmaß</h1>
+    <p class="header__sub">PDF rein, Aufmaß_Montage.xlsx &amp; Mat.-Liste_GF_1.xlsx raus</p>
+  </div>
+</header>
+
+<main class="main">
+
+  <section id="dropzone" class="drop">
+    <input type="file" id="fileInput" accept="application/pdf" hidden>
+    <p class="drop__title">Einblas-Protokoll (PDF) hier ablegen</p>
+    <p class="drop__hint">oder klicken zum Auswählen</p>
+  </section>
+
+  <p id="error" class="error" hidden></p>
+
+  <section id="editor" class="editor" hidden>
+    <p class="editor__source">Quelle: <span id="sourceName"></span></p>
+    <p class="editor__hint">Nur die markierten Felder werden übernommen. Bei Fehlern hier korrigieren.</p>
+
+    <div id="fields" class="fields"></div>
+
+    <div class="editor__actions">
+      <button id="resetBtn" class="btn btn--ghost">Andere Datei</button>
+      <button id="generateBtn" class="btn btn--primary">Archiv erstellen</button>
+    </div>
+  </section>
+
+  <section id="result" class="result" hidden>
+    <p class="result__title">Fertig.</p>
+    <a id="downloadLink" class="btn btn--primary" download>Download</a>
+    <button id="againBtn" class="btn btn--ghost">Neues Protokoll</button>
+  </section>
+
+</main>
+
+<div id="loader" class="loader" hidden>
+  <div class="loader__box">
+    <ol id="steps" class="steps"></ol>
+    <div class="progress"><div id="progressBar" class="progress__bar"></div></div>
+    <p id="progressText" class="progress__text">0%</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="js/xlsx-patch.js"></script>
+<script src="js/pdf-fields.js"></script>
+<script src="js/pdf-edit.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
