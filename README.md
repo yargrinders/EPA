@@ -1,7 +1,7 @@
 # Einblas-Protokoll → Aufmaß
 
 Reine Frontend-App (kein Backend, kein Build-Schritt) für GitHub Pages.
-PDF rein → zwei fertig ausgefüllte xlsx + (ggf. korrigiertes) PDF raus, als
+PDF rein → zwei fertig ausgefüllte xlsx + optional PDF raus, als
 ZIP-Archiv mit dem Namen der PDF-Datei.
 
 ## Struktur
@@ -13,6 +13,7 @@ js/xlsx-patch.js      Schreibt Werte direkt in die xlsx-XML (JSZip),
                        ohne Schrift/Format/Logo anzufassen
 js/pdf-fields.js       Liest Seite 1 des PDFs (pdf.js), erkennt die Felder
 js/pdf-edit.js          Übermalt geänderte Felder im PDF mit dem neuen Wert
+js/settings.js          Zentrale Einstellungen: PDF in ZIP ja/nein, PDF-Edit ja/nein usw.
 js/main.js               Ablauf: Drop → Editor → Generieren → automatischer Download mit sichtbarer Download-Schaltfläche als Fallback
 json/rules.json           Zuordnung Feld → Zelle (zentral, hier anpassen)
 files/Aufmaß_Montage.xlsx  Vorlage (Original, Formatierung/Logo bleiben erhalten)
@@ -71,3 +72,54 @@ Neue Firma-Kürzel, andere Zellen, neue Felder – alles zentral in
 - Mat.-Liste: Strecke wird in Spalte D der passenden Faser-Zeile geschrieben, nicht in B.
 - Datum für Mat.-Liste bleibt auf D1 mit Format TT.MM.JJJJ.
 - Beim Packen läuft eine Fortschrittsanzeige; danach wird der Download automatisch angestoßen, Button bleibt als Reserve sichtbar.
+
+
+## settings.js
+
+Die wichtigste Einstellung liegt in `js/settings.js`:
+
+```js
+const SETTINGS = {
+  pdf: {
+    include: true,          // true = PDF kommt in ZIP, false = PDF kommt NICHT in ZIP
+    editChangedFields: true // true = geänderte PDF-Felder optisch ins PDF schreiben
+  },
+  excel: {
+    aufmass: true,
+    material: true
+  },
+  archive: {
+    autoDownload: true,
+    compression: 'DEFLATE'
+  },
+  ui: {
+    showLoader: true,
+    debug: false
+  }
+};
+```
+
+Wenn du kein PDF im Archiv willst:
+
+```js
+pdf: {
+  include: false,
+  editChangedFields: true
+}
+```
+
+Dann enthält das ZIP nur:
+
+- `Aufmaß_Montage.xlsx`
+- `Mat.-Liste_GF_1.xlsx`
+
+Wenn du PDF im Archiv willst, aber ohne PDF-Bearbeitung:
+
+```js
+pdf: {
+  include: true,
+  editChangedFields: false
+}
+```
+
+Dann enthält das ZIP den originalen PDF + beide Excel-Dateien.

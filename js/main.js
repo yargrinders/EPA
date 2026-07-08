@@ -25,15 +25,32 @@
   let RULES = null;
   let state = null; // { fileName, pdfBytes, fields, lines }
 
+  const APP_SETTINGS = Object.assign({
+    pdf: { include: true, editChangedFields: true },
+    excel: { aufmass: true, material: true },
+    archive: { autoDownload: true, compression: 'DEFLATE' },
+    ui: { showLoader: true, debug: false },
+  }, window.SETTINGS || (typeof SETTINGS !== 'undefined' ? SETTINGS : {}));
+
+  // Deep defaults for nested settings
+  APP_SETTINGS.pdf = Object.assign({ include: true, editChangedFields: true }, APP_SETTINGS.pdf || {});
+  APP_SETTINGS.excel = Object.assign({ aufmass: true, material: true }, APP_SETTINGS.excel || {});
+  APP_SETTINGS.archive = Object.assign({ autoDownload: true, compression: 'DEFLATE' }, APP_SETTINGS.archive || {});
+  APP_SETTINGS.ui = Object.assign({ showLoader: true, debug: false }, APP_SETTINGS.ui || {});
+
   const STEP_DEFS = [
     'PDF wird gelesen',
     'Felder werden erkannt',
     'Tabellen werden befüllt',
-    'PDF wird aktualisiert',
+    'PDF wird vorbereitet',
     'Archiv wird gepackt',
   ];
 
   init();
+
+  function debugLog(...args) {
+    if (APP_SETTINGS.ui.debug) console.log('[EPA]', ...args);
+  }
 
   async function init() {
     RULES = await fetch('json/rules.json').then(r => r.json());
@@ -157,6 +174,7 @@
   async function onGenerate() {
     hideError();
     const values = readFormValues();
+    debugLog('Form values', values, 'Settings', APP_SETTINGS);
 
     const fasern = values.fasern;
     if (!RULES.fasern_allowed.map(String).includes(fasern)) {
@@ -228,38 +246,56 @@
 
       const aufmassMeta = RULES.files.aufmass;
       const matlisteMeta = RULES.files.matliste;
-      const [aufmassTplBytes, matlisteTplBytes] = await Promise.all([
-        fetch(aufmassMeta.path).then(r => r.arrayBuffer()),
-        fetch(matlisteMeta.path).then(r => r.arrayBuffer()),
-      ]);
+      let aufmassOut = null;
+      let matlisteOut = null;
 
-      const [aufmassOut, matlisteOut] = await Promise.all([
-        XlsxPatch.patch(aufmassTplBytes, aufmassMeta.sheets, editsByFile.aufmass),
-        XlsxPatch.patch(matlisteTplBytes, matlisteMeta.sheets, editsByFile.matliste),
-      ]);
+      if (APP_SETTINGS.excel.aufmass) {
+        const aufmassTplBytes = await fetch(aufmassMeta.path).then(r => r.arrayBuffer());
+        aufmassOut = await XlsxPatch.patch(aufmassTplBytes, aufmassMeta.sheets, editsByFile.aufmass);
+      }
+
+      if (APP_SETTINGS.excel.material) {
+        const matlisteTplBytes = await fetch(matlisteMeta.path).then(r => r.arrayBuffer());
+        matlisteOut = await XlsxPatch.patch(matlisteTplBytes, matlisteMeta.sheets, editsByFile.matliste);
+      }
       setStep(2, 'done');
 
       setStep(3, 'active');
-      const overlays = [];
-      for (const def of RULES.pdf_fields) {
-        const original = state.fields[def.key];
-        if (!original) continue;
-        const newVal = values[def.key];
-        if (newVal !== original.value && original.bbox) {
-          overlays.push({ bbox: original.bbox, text: newVal });
+      let finalPdfBytes = null;
+      if (APP_SETTINGS.pdf.include) {
+        if (APP_SETTINGS.pdf.editChangedFields) {
+          const overlays = [];
+          for (const def of RULES.pdf_fields) {
+            const original = state.fields[def.key];
+            if (!original) continue;
+            const newVal = values[def.key];
+            if (newVal !== original.value && original.bbox) {
+              overlays.push({ bbox: original.bbox, text: newVal });
+            }
+          }
+          finalPdfBytes = await PdfEdit.applyOverlays(state.pdfBytes, overlays);
+        } else {
+          finalPdfBytes = state.pdfBytes;
         }
       }
-      const finalPdfBytes = await PdfEdit.applyOverlays(state.pdfBytes, overlays);
       setStep(3, 'done');
 
       setStep(4, 'active');
       const zip = new JSZip();
       const baseName = state.fileName.replace(/\.pdf$/i, '');
-      zip.file(baseName + '.pdf', finalPdfBytes);
-      zip.file(aufmassMeta.name, aufmassOut);
-      zip.file(matlisteMeta.name, matlisteOut);
+
+      if (APP_SETTINGS.pdf.include && finalPdfBytes) {
+        zip.file(baseName + '.pdf', finalPdfBytes);
+      }
+      if (APP_SETTINGS.excel.aufmass && aufmassOut) {
+        zip.file(aufmassMeta.name, aufmassOut);
+      }
+      if (APP_SETTINGS.excel.material && matlisteOut) {
+        zip.file(matlisteMeta.name, matlisteOut);
+      }
+
       const zipBlob = await zip.generateAsync(
-        { type: 'blob', compression: 'DEFLATE' },
+        { type: 'blob', compression: APP_SETTINGS.archive.compression || 'DEFLATE' },
         meta => setProgress(meta.percent || 0)
       );
       setStep(4, 'done');
@@ -274,7 +310,9 @@
       els.result.hidden = false;
 
       // Try automatic download; the visible button remains as fallback if the browser blocks it.
-      setTimeout(() => els.downloadLink.click(), 100);
+      if (APP_SETTINGS.archive.autoDownload) {
+        setTimeout(() => els.downloadLink.click(), 100);
+      }
     } catch (err) {
       console.error(err);
       hideLoader();
@@ -283,6 +321,7 @@
   }
 
   function showLoader() {
+    if (!APP_SETTINGS.ui.showLoader) return;
     els.steps.innerHTML = '';
     setProgress(0);
     STEP_DEFS.forEach((label, i) => {
@@ -294,10 +333,12 @@
     els.loader.hidden = false;
   }
   function setStep(i, status) {
+    if (!APP_SETTINGS.ui.showLoader) return;
     const li = document.getElementById('step_' + i);
     if (li) li.className = 'step--' + status;
   }
   function setProgress(percent) {
+    if (!APP_SETTINGS.ui.showLoader) return;
     if (!els.progressBar || !els.progressText) return;
     const p = Math.max(0, Math.min(100, Math.round(percent)));
     els.progressBar.style.width = p + '%';
